@@ -1,0 +1,13 @@
+{
+  "name": "devops-teams-bot",
+  "version": "1.0.0",
+  "description": "Azure DevOps Teams bot with LLM support",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "botbuilder": "^4.21.0
