@@ -1,152 +1,314 @@
-# DevOps Teams Bot
+Great idea — and yes, you don’t need MCP unless you’re building a reusable protocol server for many tools.
+For a **local DevOps assistant bot**, a clean Python service + API clients + optional LLM layer is simpler and more maintainable.
 
-Azure DevOps → Microsoft Teams notification bot.  
-**No Azure AD app registration required. No infrastructure in the client's tenant.**
-
----
-
-## Architecture
-
-```
-Azure DevOps          Your Server           Microsoft Teams
-  Service Hooks  →→→  Express.js  →→→  Workflows Webhook URL
-                       (+ LLM)
-```
-
-Your server lives on **your own infra** (Railway, Fly.io, VPS, etc.).  
-The client only configures two things in their tenant — both are self-service.
+Below is a solid, production-friendly **boilerplate architecture** you can build on and package as Docker.
 
 ---
 
-## What the Client Needs to Do (~10 min total)
+# 🧱 Project Overview
 
-### 1. Create a Teams Workflows Webhook (2 min)
+Your bot will:
 
-1. Open the target Teams channel
-2. Click **+** (Apps) → search **Workflows**
-3. Choose template: _"Post to a channel when a webhook request is received"_
-4. Follow the wizard → copy the generated **webhook URL**
-5. Paste it into your `.env` as `TEAMS_WEBHOOK_URL`
+1. **Connect to your DevOps platform APIs**
+   (boards, pipelines, repos, work items, etc.)
 
-> ⚠️ This replaces the deprecated Office 365 Connectors. Do **not** use the old "Incoming Webhook" connector.
+2. **Run maintenance tasks**
 
-### 2. Add Azure DevOps Service Hooks (8 min)
+   * Health checks
+   * Broken pipeline detection
+   * Stale branch cleanup
+   * Work item hygiene
+   * Auto-fixes
 
-In **Azure DevOps → Project Settings → Service hooks → + Create subscription**:
+3. **Optional LLM layer**
 
-| Event | Filters | URL |
-|---|---|---|
-| Work item created | Work item type = Bug | `https://your-server/webhook/devops` |
-| Work item commented on | (none) | `https://your-server/webhook/devops` |
-| Work item updated | Work item type = User Story, State = In Review | `https://your-server/webhook/devops` |
-| _(Sprint health is on a schedule — see below)_ | | |
+   * Summaries
+   * Rewrite work items
+   * PR review suggestions
+   * Root-cause analysis hints
 
-For each hook, under **HTTP headers** add:
+4. **Run locally or as a containerized worker**
+
+---
+
+# 🗂️ Suggested Project Structure
+
 ```
-Authorization: Bearer <WEBHOOK_AUTH_TOKEN>
+devops-bot/
+│
+├─ app/
+│  ├─ main.py                # Entry point
+│  ├─ config.py              # Settings & secrets
+│  │
+│  ├─ clients/               # API integrations
+│  │  ├─ devops_client.py
+│  │  ├─ git_client.py
+│  │  └─ jira_client.py
+│  │
+│  ├─ tasks/                 # Maintenance jobs
+│  │  ├─ health_checks.py
+│  │  ├─ board_cleanup.py
+│  │  ├─ pipeline_checks.py
+│  │  └─ repo_maintenance.py
+│  │
+│  ├─ llm/                   # Optional AI helpers
+│  │  ├─ advisor.py
+│  │  ├─ summarizer.py
+│  │  └─ reviewer.py
+│  │
+│  ├─ utils/
+│  │  ├─ logger.py
+│  │  └─ helpers.py
+│  │
+│  └─ models/
+│     └─ schemas.py
+│
+├─ requirements.txt
+├─ Dockerfile
+├─ .env.example
+└─ README.md
 ```
 
 ---
 
-## Local Setup
+# 🧠 Core Design Pattern
 
-```bash
-cp .env.example .env
-# Fill in TEAMS_WEBHOOK_URL, DEVOPS_WEBHOOK_SECRET, WEBHOOK_AUTH_TOKEN
+Use a **Task Runner pattern**:
 
-npm install
-npm run dev
+```
+main.py → choose task → task uses clients → optional LLM → report
 ```
 
-Expose locally with [ngrok](https://ngrok.com) for testing:
-```bash
-ngrok http 3000
-# Use the https URL as your ADO service hook endpoint
+This keeps it modular and easy to expand.
+
+---
+
+# 🧩 Minimal Boilerplate Code
+
+## `app/main.py`
+
+```python
+import argparse
+from tasks.health_checks import run_health_checks
+from tasks.board_cleanup import cleanup_board
+from utils.logger import get_logger
+
+log = get_logger()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("task", help="Task to run")
+    args = parser.parse_args()
+
+    if args.task == "health":
+        run_health_checks()
+    elif args.task == "cleanup-board":
+        cleanup_board()
+    else:
+        log.error(f"Unknown task: {args.task}")
+
+if __name__ == "__main__":
+    main()
 ```
 
 ---
 
-## Deployment Options (your infra, no client involvement)
+## `app/config.py`
 
-### Railway (recommended — easiest)
-```bash
-railway login
-railway init
-railway up
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DEVOPS_URL = os.getenv("DEVOPS_URL")
+DEVOPS_TOKEN = os.getenv("DEVOPS_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
 
-### Fly.io
-```bash
-fly launch
-fly deploy
+---
+
+## `app/clients/devops_client.py`
+
+```python
+import requests
+from config import DEVOPS_URL, DEVOPS_TOKEN
+
+class DevOpsClient:
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {DEVOPS_TOKEN}",
+            "Content-Type": "application/json"
+        })
+
+    def get_projects(self):
+        r = self.session.get(f"{DEVOPS_URL}/_apis/projects")
+        r.raise_for_status()
+        return r.json()
 ```
 
-### Docker (any VPS)
+---
+
+## `app/tasks/health_checks.py`
+
+```python
+from clients.devops_client import DevOpsClient
+from utils.logger import get_logger
+
+log = get_logger()
+
+def run_health_checks():
+    client = DevOpsClient()
+    projects = client.get_projects()
+    log.info(f"Found {len(projects.get('value', []))} projects")
+```
+
+---
+
+## Optional LLM Layer
+
+## `app/llm/advisor.py`
+
+```python
+from openai import OpenAI
+from config import OPENAI_API_KEY
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+def get_advice(text):
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": text}]
+    )
+    return resp.choices[0].message.content
+```
+
+---
+
+# 📦 requirements.txt
+
+```
+requests
+python-dotenv
+openai
+pydantic
+rich
+```
+
+---
+
+# 🐳 Dockerfile
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ app/
+
+ENV PYTHONPATH=/app
+
+ENTRYPOINT ["python", "app/main.py"]
+```
+
+---
+
+# 🔐 .env.example
+
+```
+DEVOPS_URL=https://dev.azure.com/your-org
+DEVOPS_TOKEN=your_token_here
+OPENAI_API_KEY=your_key_here
+```
+
+---
+
+# ▶️ Run Locally
+
+```bash
+pip install -r requirements.txt
+python app/main.py health
+```
+
+---
+
+# 🐳 Build & Run Docker
+
 ```bash
 docker build -t devops-bot .
-docker run -p 3000:3000 --env-file .env devops-bot
+docker run --env-file .env devops-bot health
 ```
 
 ---
 
-## Sprint Health Reports
+# 🧩 Nice Additions (Recommended)
 
-Sprint health isn't event-driven — it's scheduled. Set up a daily/weekly trigger using:
+## 1. Scheduler
 
-- **GitHub Actions** (cron schedule → `curl -X POST https://your-server/webhook/sprint-health`)
-- **Any cron job** on your server
-- **Azure Logic App** in the client's tenant (optional, no special permissions needed)
+Run periodic jobs:
 
-To wire up real sprint data, implement `fetchSprintData()` in `src/handlers/index.ts`  
-using the [ADO REST API](https://learn.microsoft.com/en-us/rest/api/azure/devops/work/iterations).
+* APScheduler
+* Cron inside container
+* Kubernetes CronJob
 
----
+## 2. CLI Upgrade
 
-## Enabling LLM Enrichment
-
-Edit `.env` to add AI-generated summaries to every notification.
-
-**Option A — Anthropic Claude:**
-```env
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Option B — Azure OpenAI:**
-```env
-LLM_PROVIDER=azure-openai
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-```
-
-No code changes needed — the provider is swapped at startup.
-
----
-
-## Project Structure
+Use:
 
 ```
-src/
-├── index.ts                  # Express server + routes
-├── types.ts                  # Shared TypeScript types
-├── handlers/
-│   └── index.ts              # One handler per event type + router
-├── formatters/
-│   └── adaptiveCards.ts      # Adaptive Card builders
-├── llm/
-│   └── index.ts              # LLM abstraction (Anthropic / Azure OpenAI / noop)
-└── utils/
-    ├── normalise.ts           # ADO payload → NormalisedEvent
-    └── teams.ts               # POST to Teams Workflows webhook
+typer
+```
+
+for beautiful CLI.
+
+## 3. Reporting
+
+* Slack webhook alerts
+* Email summaries
+* Markdown reports
+
+## 4. Plugin System
+
+Auto-discover tasks:
+
+```python
+# auto-load tasks from tasks/ folder
 ```
 
 ---
 
-## Endpoints
+# 🧠 If You're Using Specific Platforms
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | Uptime check |
-| `POST` | `/webhook/devops` | Receives all ADO service hook events |
-| `POST` | `/webhook/sprint-health` | Manually trigger a sprint health post |
+You can add first-class clients for:
+
+* **Azure DevOps**
+* **GitHub**
+* **GitLab**
+* **Jira**
+* **Jenkins**
+
+---
+
+# 🚀 If You Want, I Can Also Provide
+
+* Async version (faster API calls)
+* Web dashboard UI
+* PR auto-review bot
+* Board auto-grooming bot
+* AI incident postmortem generator
+* Multi-agent tool-using LLM
+* Kubernetes deployment manifests
+
+---
+
+If you tell me:
+
+1️⃣ Which DevOps platform(s)
+2️⃣ Local script vs long-running service
+3️⃣ Whether AI features are core or optional
+
+I can tailor this into a ready-to-run starter repo.
