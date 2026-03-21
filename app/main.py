@@ -1,5 +1,6 @@
 import argparse
 from tasks.health_checks import run_health_checks
+from tasks.list_bugs import list_bugs
 from utils.logger import get_logger
 
 log = get_logger()
@@ -10,7 +11,8 @@ def main():
     args = parser.parse_args()
 
     if args.task == "health":
-        run_health_checks()
+        # run_health_checks()
+        list_bugs()
 #    elif args.task == "cleanup-board":
 #        cleanup_board()
     else:
