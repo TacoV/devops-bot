@@ -6,4 +6,7 @@ log = get_logger()
 def run_health_checks():
     client = DevOpsClient()
     projects = client.get_projects()
-    log.info(f"Found {len(projects.get('value', []))} projects")
+    log.info(f"Found {projects.get('count')} projects")
+    for project in projects.get('value', []):
+        print(project.get('name'))
+        print(project)

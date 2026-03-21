@@ -13,3 +13,6 @@ class DevOpsClient:
         r = self.session.get(f"{DEVOPS_URL}/_apis/projects")
         r.raise_for_status()
         return r.json()
+
+    def get_tickets(self):
+        r = self.session.get(f"{DEVOPS_URL}")
