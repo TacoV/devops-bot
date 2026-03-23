@@ -42,7 +42,7 @@ devops-bot/
 - Supports three tasks:
   - `health` - Run health checks via [`run_health_checks()`](app/tasks/health_checks.py:6)
   - `bugs` - List bugs via [`list_bugs()`](app/tasks/list_bugs.py:6)
-  - `advice` - Get LLM advice via [`get_advice()`](app/llm/advisor.py:6) (requires `--text` argument)
+  - `advice` - Get LLM advice via [`get_advice()`](app/llm/advisor.py:6) (requires `--text` argument; **requires `OPENAI_API_KEY` to be set** - will skip if not configured)
 - Pattern: `python app/main.py <task> [--text "your text"]`
 
 ### Configuration (`app/config.py`)
@@ -84,20 +84,9 @@ Loads from environment variables:
 ## Usage
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run individual tasks
-python app/main.py health
-python app/main.py bugs
-python app/main.py advice --text "How do I improve my DevOps pipeline?"
-
-# Run all tasks in succession (test)
-# Default: runs via Python
+# Run all tasks (test)
+# Uses Docker - ensure .env file is configured
 ./run-local.sh
-
-# Or run via Docker
-./run-local.sh docker
 ```
 
 ## Notes for Development

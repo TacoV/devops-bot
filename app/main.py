@@ -1,7 +1,6 @@
 import argparse
 from tasks.health_checks import run_health_checks
 from tasks.list_bugs import list_bugs
-from llm.advisor import get_advice
 from utils.logger import get_logger
 
 log = get_logger()
@@ -19,14 +18,28 @@ def main():
         log.info("Listing bugs...")
         list_bugs()
     elif args.task == "advice":
-        if not args.text:
-            log.error("Missing --text argument for advice task")
-            return
-        log.info("Getting advice...")
-        result = get_advice(args.text)
-        log.info(f"Advice: {result}")
+        _run_advice(args.text)
     else:
         log.error(f"Unknown task: {args.task}")
+
+
+def _run_advice(text):
+    """Run advice task with optional OpenAI API."""
+    from config import OPENAI_API_KEY
+    from llm.advisor import get_advice
+
+    if not OPENAI_API_KEY:
+        log.warning("OPENAI_API_KEY not set. Skipping advice task.")
+        log.info("Set OPENAI_API_KEY in .env to enable AI advice.")
+        return
+
+    if not text:
+        log.error("Missing --text argument for advice task")
+        return
+
+    log.info("Getting advice...")
+    result = get_advice(text)
+    log.info(f"Advice: {result}")
 
 if __name__ == "__main__":
     main()
