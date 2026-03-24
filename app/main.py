@@ -206,11 +206,11 @@ Examples:
 def _run_advice(text: str):
     """Run advice task with LLM."""
     from llm.advisor import get_advice
-    from llm.client import HAS_OLLAMA, HAS_OPENAI
+    from llm.client import HAS_OPENAI
 
-    if not HAS_OLLAMA and not HAS_OPENAI:
+    if not HAS_OPENAI:
         log.warning("No LLM provider available.")
-        log.info("Install Ollama (https://ollama.ai/) or set OPENAI_API_KEY.")
+        log.info("Set OPENAI_API_KEY to enable AI intelligence.")
         return
 
     log.info("Getting advice...")

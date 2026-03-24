@@ -1,18 +1,18 @@
 """
-LLM client supporting both Ollama (free, local) and OpenAI.
-Uses Ollama by default - set OPENAI_API_KEY to use OpenAI instead.
+LLM client using OpenAI API with graceful fallback when no API key is provided.
 """
 import json
 from typing import Optional
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, OPENAI_API_KEY
+from config import OPENAI_API_KEY
 from utils.logger import get_logger
 
 log = get_logger()
 
-# Check what's available
+# Check if OpenAI is available
 HAS_OPENAI = bool(OPENAI_API_KEY)
 
-# Try to import OpenAI
+# Try to initialize OpenAI client
+_openai_client = None
 if HAS_OPENAI:
     try:
         from openai import OpenAI as OpenAIClient
@@ -21,53 +21,15 @@ if HAS_OPENAI:
         log.warning("OpenAI package not installed. Install with: pip install openai")
         HAS_OPENAI = False
 
-# Check if Ollama is available
-try:
-    import urllib.request
-    req = urllib.request.Request(f"{OLLAMA_BASE_URL}/api/tags")
-    with urllib.request.urlopen(req, timeout=2) as response:
-        HAS_OLLAMA = response.status == 200
-except Exception:
-    HAS_OLLAMA = False
-
-log.info(f"LLM providers: Ollama={HAS_OLLAMA}, OpenAI={HAS_OPENAI}")
-
-
-def _call_ollama(model: str, messages: list[dict], stream: bool = False) -> Optional[str]:
-    """Call Ollama API (free, local)."""
-    import urllib.request
-    import urllib.error
-    
-    url = f"{OLLAMA_BASE_URL}/api/chat"
-    payload = {
-        "model": model,
-        "messages": messages,
-        "stream": stream
-    }
-    
-    data = json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"}
-    )
-    
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            result = json.loads(response.read().decode("utf-8"))
-            return result.get("message", {}).get("content")
-    except urllib.error.URLError as e:
-        log.error(f"Ollama connection failed: {e}")
-        log.info("Make sure Ollama is running: https://ollama.ai/")
-        return None
-    except Exception as e:
-        log.error(f"Ollama call failed: {e}")
-        return None
+if HAS_OPENAI:
+    log.info("LLM: OpenAI enabled")
+else:
+    log.warning("LLM: No API key configured. Set OPENAI_API_KEY for AI intelligence.")
 
 
 def _call_openai(model: str, messages: list[dict]) -> Optional[str]:
     """Call OpenAI API (requires API key)."""
-    if not HAS_OPENAI:
+    if not HAS_OPENAI or _openai_client is None:
         return None
     
     try:
@@ -84,41 +46,30 @@ def _call_openai(model: str, messages: list[dict]) -> Optional[str]:
 def complete(
     prompt: str,
     system_prompt: str = "You are a helpful assistant.",
-    model: Optional[str] = None,
-    use_openai: bool = False
+    model: Optional[str] = None
 ) -> Optional[str]:
     """
-    Generate a completion using available LLM provider.
+    Generate a completion using OpenAI.
     
     Args:
         prompt: User message
         system_prompt: System context
-        model: Model name (defaults to config value)
-        use_openai: Force OpenAI even if Ollama is available
+        model: Model name (defaults to gpt-4o-mini)
     
     Returns:
         Generated text or None if unavailable
     """
+    if not HAS_OPENAI:
+        log.debug("LLM unavailable: No API key configured")
+        return None
+    
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt}
     ]
     
-    # Determine which provider to use
-    if use_openai and HAS_OPENAI:
-        model = model or "gpt-4o-mini"
-        return _call_openai(model, messages)
-    
-    if HAS_OLLAMA:
-        model = model or OLLAMA_MODEL
-        return _call_ollama(model, messages)
-    
-    if HAS_OPENAI:
-        model = model or "gpt-4o-mini"
-        return _call_openai(model, messages)
-    
-    log.warning("No LLM provider available. Install Ollama or set OPENAI_API_KEY.")
-    return None
+    model = model or "gpt-4o-mini"
+    return _call_openai(model, messages)
 
 
 def complete_json(
@@ -158,4 +109,4 @@ if __name__ == "__main__":
     if result:
         print(f"LLM Response: {result}")
     else:
-        print("No LLM available. Install Ollama or set OPENAI_API_KEY.")
+        print("No LLM available. Set OPENAI_API_KEY to enable AI intelligence.")

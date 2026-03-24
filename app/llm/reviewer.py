@@ -1,6 +1,6 @@
 """
 LLM-powered code and work item review/rating functionality.
-Uses Ollama (free, local) by default, OpenAI as fallback.
+Requires OPENAI_API_KEY to be set for AI intelligence.
 """
 from typing import Optional
 from llm.client import complete, complete_json

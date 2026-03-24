@@ -10,7 +10,6 @@ Teams customize this file to match their workflow:
 """
 from typing import Optional
 
-
 class TeamConfig:
     """Configuration for a specific team's DevOps workflow."""
     
@@ -148,7 +147,7 @@ Consider the team's workflow and conventions."""
                 [System.TeamProject] = '{self.project}'
                 {type_filter}
                 AND [System.ChangedDate] < @today - {stale_days}
-            ORDER BY [System.ChangedDate}
+            ORDER BY [System.ChangedDate]
         """
     
     # Check if a state transition is valid

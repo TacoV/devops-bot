@@ -1,6 +1,6 @@
 """
 LLM advisor for general DevOps questions.
-Uses Ollama (free, local) by default, OpenAI as fallback.
+Requires OPENAI_API_KEY to be set for AI intelligence.
 """
 from llm.client import complete
 from utils.logger import get_logger
@@ -33,4 +33,4 @@ Be concise but thorough. When unsure, acknowledge limitations."""
     if result:
         return result
     
-    return "LLM unavailable. Please ensure Ollama is running or set OPENAI_API_KEY."
+    return "LLM unavailable. Please set OPENAI_API_KEY to enable AI intelligence."

@@ -1,6 +1,6 @@
 """
 LLM-powered summarization for DevOps work items and reports.
-Uses Ollama (free, local) by default, OpenAI as fallback.
+Requires OPENAI_API_KEY to be set for AI intelligence.
 """
 from typing import Optional
 from llm.client import complete, complete_json
