@@ -83,6 +83,14 @@ def run_summarize(task: str, item_ids: Optional[str] = None):
             log.info("\n📊 Sprint Summary:\n" + summary)
 
 
+def run_check():
+    """Run work item consistency checks."""
+    from tasks.consistency_checks import run_consistency_checks
+    
+    results = run_consistency_checks()
+    return results
+
+
 def run_rate(item_id: Optional[int] = None):
     """Rate work item priority using LLM."""
     from clients.devops_client import DevOpsClient
@@ -121,6 +129,7 @@ Examples:
   %(prog)s health                    List projects and health status
   %(prog)s bugs                      List active bugs with optional summary
   %(prog)s stale --days 7            Find items not updated in 7 days
+  %(prog)s check                     Run consistency checks
   %(prog)s summarize bugs            LLM summary of active bugs
   %(prog)s rate --id 123             LLM priority rating for work item
         """
@@ -148,6 +157,10 @@ Examples:
     rate_parser = subparsers.add_parser("rate", help="Rate work item priority")
     rate_parser.add_argument("--id", type=int, help="Work item ID to rate")
 
+    # check command
+    check_parser = subparsers.add_parser("check", help="Run consistency checks")
+    check_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+
     # advice command (legacy)
     advice_parser = subparsers.add_parser("advice", help="Get AI advice")
     advice_parser.add_argument("--text", required=True, help="Question or context")
@@ -173,6 +186,9 @@ Examples:
         
         elif args.task == "rate":
             run_rate(args.id)
+        
+        elif args.task == "check":
+            run_check()
         
         elif args.task == "advice":
             _run_advice(args.text)

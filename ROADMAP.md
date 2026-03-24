@@ -4,7 +4,7 @@ A local Azure DevOps assistant bot for work item maintenance. Python + API clien
 
 ## Current Features
 
-- **CLI tasks**: `health`, `bugs`, `stale`, `summarize`, `rate`, `advice`
+- **CLI tasks**: `health`, `bugs`, `stale`, `check`, `summarize`, `rate`, `advice`
 - **LLM integration**: Ollama (free, local) with OpenAI fallback
 - **Work item queries**: WIQL-based retrieval and filtering
 - **Team configuration**: [`app/config/team.py`](app/config/team.py) - Centralized team-specific rules
@@ -15,6 +15,17 @@ A local Azure DevOps assistant bot for work item maintenance. Python + API clien
 - [ ] **Auto-fix work items** - Close duplicates, update states, remove stale tags
 - [ ] **Hierarchy validation** - Ensure proper parent-child relationships (uses `team.hierarchy_rules`)
 - [ ] **Sprint hygiene** - Flag items outside sprints, check sprint capacity
+
+### Work Item Consistency Checks (most rules depend on Work Item type)
+- [x] **Orphaned children** - Closed/Done parent with Active children
+- [x] **Empty parent** - Active story/epic without child tasks
+- [x] **Missing estimates** - Tasks without Story Points or effort
+- [x] **Priority mismatch** - Child has higher priority than parent
+- [ ] **Orphaned items** - Items not linked to any sprint/iteration
+- [ ] **Missing descriptions** - Items without meaningful description
+- [ ] **Vague titles** - Items with one-word or uninformative titles
+- [ ] **Missing required fields** - List of fields that must not be empty
+- [ ] **Filled in unneeded fields** - For example, Features must not have an Iteration
 
 ### Team Configuration (in [`app/config/team.py`](app/config/team.py))
 - Work item types and states
