@@ -5,37 +5,37 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from clients.devops_client import DevOpsClient
-from config import DEVOPS_PROJECT
+from config import DEVOPS_PROJECT, default_team
 from utils.logger import get_logger
 
 log = get_logger()
 
-# Default: items not updated in 14 days are considered stale
-DEFAULT_STALE_THRESHOLD_DAYS = 14
-
 
 def find_stale_items(
     project: Optional[str] = None,
-    days: int = DEFAULT_STALE_THRESHOLD_DAYS,
+    days: Optional[int] = None,
     work_item_types: Optional[list[str]] = None,
-    states: Optional[list[str]] = None
+    states: Optional[list[str]] = None,
+    team: Optional[object] = None
 ) -> list[dict]:
     """
     Find work items that haven't been updated in the specified number of days.
     
     Args:
         project: Azure DevOps project name (defaults to config value)
-        days: Number of days after which an item is considered stale
+        days: Number of days after which an item is considered stale (uses team default if not set)
         work_item_types: List of work item types to check (e.g., ['Bug', 'Task'])
         states: List of states to include (e.g., ['Active', 'To Do'])
+        team: TeamConfig instance (uses default_team if not provided)
     
     Returns:
         List of stale work items with their details
     """
+    team = team or default_team
     project = project or DEVOPS_PROJECT
     client = DevOpsClient()
     
-    # Build WIQL query
+    # Build WIQL query using team configuration
     work_item_filter = ""
     if work_item_types:
         types_str = ", ".join(f"'{wt}'" for wt in work_item_types)
@@ -46,7 +46,9 @@ def find_stale_items(
         states_str = ", ".join(f"'{s}'" for s in states)
         state_filter = f"AND [System.State] IN ({states_str})"
     
-    cutoff_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+    # Use team-configured stale threshold if not specified
+    if days is None:
+        days = team.default_stale_days
     
     query = f"""
         SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], 
@@ -57,7 +59,7 @@ def find_stale_items(
             AND [System.ChangedDate] < @today - {days}
             {work_item_filter}
             {state_filter}
-        ORDER BY [System.ChangedDate] ASC
+        ORDER BY [System.ChangedDate} ASC
     """
     
     stale_items = client.get_work_items_by_query(query, project)
@@ -67,7 +69,7 @@ def find_stale_items(
     return stale_items
 
 
-def print_stale_items(items: list[dict], days: int = DEFAULT_STALE_THRESHOLD_DAYS):
+def print_stale_items(items: list[dict], days: int = 14):
     """Pretty print stale work items."""
     if not items:
         log.info("No stale items found!")
@@ -101,19 +103,22 @@ def print_stale_items(items: list[dict], days: int = DEFAULT_STALE_THRESHOLD_DAY
     log.info(f"Total: {len(items)} stale items")
 
 
-def run_stale_check(days: int = DEFAULT_STALE_THRESHOLD_DAYS, project: Optional[str] = None):
+def run_stale_check(days: Optional[int] = None, project: Optional[str] = None):
     """CLI entry point for stale item detection."""
-    log.info(f"Checking for items stale for {days} days in project: {project or DEVOPS_PROJECT}")
-    items = find_stale_items(project=project, days=days)
-    print_stale_items(items, days)
+    team = default_team
+    effective_days = days if days is not None else team.default_stale_days
+    
+    log.info(f"Checking for items stale for {effective_days} days in project: {project or DEVOPS_PROJECT}")
+    items = find_stale_items(project=project, days=effective_days)
+    print_stale_items(items, effective_days)
     return items
 
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Find stale work items")
-    parser.add_argument("--days", type=int, default=DEFAULT_STALE_THRESHOLD_DAYS, 
-                        help=f"Number of days to consider an item stale (default: {DEFAULT_STALE_THRESHOLD_DAYS})")
+    parser.add_argument("--days", type=int, 
+                        help=f"Days threshold (default: {default_team.default_stale_days})")
     parser.add_argument("--project", type=str, help="Project name override")
     args = parser.parse_args()
     run_stale_check(days=args.days, project=args.project)
