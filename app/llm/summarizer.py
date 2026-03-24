@@ -116,54 +116,6 @@ Include:
     return complete(user_content, system_prompt)
 
 
-def summarize_pipeline_failure(build_info: dict, logs: Optional[dict] = None) -> Optional[str]:
-    """
-    Analyze and explain why a pipeline build failed.
-    
-    Args:
-        build_info: Build summary from pipeline_checks
-        logs: Optional build logs with task outputs
-    
-    Returns:
-        LLM-generated failure analysis
-    """
-    system_prompt = """You are a DevOps assistant analyzing pipeline failures.
-Focus on actionable insights.
-Identify the most likely root causes.
-Suggest specific steps to fix the issue.
-Keep explanations technical but accessible."""
-    
-    build_summary = f"""Build #{build_info.get('build_number')} failed
-Pipeline: {build_info.get('definition_name')}
-Branch: {build_info.get('source_branch')}
-Requested by: {build_info.get('requested_by')}
-Started: {build_info.get('start_time')}
-Finished: {build_info.get('finish_time')}
-URL: {build_info.get('url')}
-"""
-    
-    if logs:
-        log_summary = "\n\n### Build Logs (key excerpts)\n"
-        for log_entry in logs[:5]:  # First 5 tasks
-            log_summary += f"\n#### {log_entry.get('task', 'Unknown Task')}\n"
-            # Include last 500 chars of each log
-            content = log_entry.get("content", "")[-500:]
-            log_summary += f"```\n{content}\n```\n"
-        build_summary += log_summary
-    
-    user_content = f"""Analyze this failed pipeline build and explain what went wrong:
-
-{build_summary}
-
-Provide:
-1. Root cause analysis
-2. Most likely failure reason
-3. Specific fix suggestions
-4. Prevention recommendations"""
-
-    return complete(user_content, system_prompt)
-
-
 def condense_description(description: str, max_length: int = 200) -> Optional[str]:
     """
     Condense a lengthy work item description into a concise summary.

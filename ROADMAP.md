@@ -8,17 +8,15 @@ This document outlines the planned features and improvements for the devops-bot 
 
 The bot currently supports:
 - ✅ Basic CLI entry point (`python app/main.py`)
-- ✅ Azure DevOps API client (projects, work items, builds)
+- ✅ Azure DevOps API client (projects, work items)
 - ✅ Health checks task (list projects)
-- ✅ List bugs task (fixed - queries actual Bugs)
-- ✅ LLM advisor (OpenAI integration)
-- ✅ LLM summarizer (bug summaries, sprint summaries, pipeline analysis)
+- ✅ List bugs task (queries actual Bugs)
+- ✅ LLM advisor (Ollama default, OpenAI fallback)
+- ✅ LLM summarizer (bug summaries, sprint summaries)
 - ✅ LLM reviewer (priority rating, code review, technical debt assessment)
 - ✅ Pydantic schemas for type safety
-- ✅ Slack notifications (webhook integration)
 - ✅ Logging infrastructure
 - ✅ Stale work item detector
-- ✅ Broken pipeline detector
 
 ---
 
@@ -34,17 +32,10 @@ These tasks run without LLM involvement, following predefined rules.
 - [ ] **Tag cleanup** - Remove orphaned or misspelled tags
 - [ ] **Priority audit** - Flag items missing priority assignment
 
-### Pipeline & CI/CD
-- [x] **Broken pipeline detector** - Alert on failed pipeline runs
-- [ ] **Pipeline duration trends** - Track and report slow builds
-- [ ] **Failed test summarizer** - Aggregate test failures across runs
-- [ ] **Orphaned agents cleanup** - Remove offline build agents
-
 ### Repository Maintenance
 - [ ] **Stale branch cleanup** - Identify and optionally delete branches not touched in X days
 - [ ] **Branch protection checker** - Verify critical branches have required policies
 - [ ] **Missing README detector** - Flag repos without documentation
-- [ ] **Dependency vulnerability scanner** - Check for outdated/vulnerable packages
 
 ### Team Health
 - [ ] **Workload distribution report** - Show items assigned per team member
@@ -58,22 +49,19 @@ These tasks run without LLM involvement, following predefined rules.
 These tasks wrap deterministic data with LLM intelligence for better insights.
 
 ### Summarization
-- [x] **Sprint summary generator** - Weekly digest of completed/in-progress/blocked items
 - [x] **Bug report summarizer** - Condense lengthy bug descriptions into actionable summaries
-- [x] **Pipeline failure analysis** - Explain why builds are failing in plain language
-- [ ] **Meeting notes processor** - Extract action items from meeting transcripts
+- [x] **Sprint summary generator** - Weekly digest of completed/in-progress/blocked items
+- [ ] **Description condensor** - Shorten verbose work item descriptions
 
 ### Review & Rating
-- [ ] **PR review assistant** - Analyze code changes and suggest improvements
 - [x] **Work item priority rating** - Score items by urgency/impact using LLM
+- [ ] **PR review assistant** - Analyze code changes and suggest improvements
 - [x] **Technical debt assessor** - Rate backlog items by refactoring priority
-- [ ] **Risk assessment** - Evaluate feature complexity and failure probability
+- [x] **Root cause analyzer** - Help identify underlying causes of bugs
 
 ### Enhancement
-- [ ] **Description improver** - Rewrite vague work items with clearer acceptance criteria
-- [ ] **Test case suggestion** - Propose test cases for user stories
-- [x] **Root cause analyzer** - Help identify underlying causes of bugs
-- [ ] **Title generator** - Create concise, descriptive titles for items
+- [ ] **Acceptance criteria generator** - Propose criteria for user stories
+- [ ] **Description improver** - Rewrite vague work items with clearer text
 
 ---
 
@@ -88,18 +76,11 @@ These are ideas the bot could generate autonomously to help the team.
 
 ### Automation Opportunities
 - [ ] **Repetitive task detector** - Identify manual steps that could be scripted
-- [ ] **Approval chain optimizer** - Suggest streamlined review workflows
 - [ ] **Template generator** - Create work item templates for recurring work types
-
-### Knowledge Management
-- [ ] **Linked issue finder** - Discover related items that should be connected
-- [ ] **Decision logger** - Track important project decisions with context
-- [ ] **FAQ updater** - Suggest FAQ entries based on repeated questions
 
 ### Team Health Signals
 - [ ] **Burnout risk indicator** - Flag individuals with excessive workload
 - [ ] **Idle item detector** - Items assigned but no activity for extended periods
-- [ ] **Silo breaker** - Suggest cross-training when certain people own too much
 
 ---
 
@@ -109,22 +90,13 @@ These are ideas the bot could generate autonomously to help the team.
 - [ ] **Upgrade to Typer** - Rich CLI with subcommands and help
 - [ ] **Interactive mode** - Guided task selection with menus
 - [ ] **Output formatters** - Support JSON, YAML, Markdown output formats
-- [ ] **Progress indicators** - Show progress for long-running tasks
 
 ### Scheduling & Automation
 - [ ] **APScheduler integration** - Run tasks on cron-like schedules
 - [ ] **Daemon mode** - Long-running service with webhook triggers
-- [ ] **Kubernetes CronJob manifests** - Production deployment options
-
-### Reporting & Notifications
-- [x] **Slack webhook integration** - Send alerts to channels
-- [ ] **Email digest** - Scheduled summary emails
-- [ ] **Dashboard generation** - Static HTML/JSON status pages
-- [ ] **GitHub/GitLab issue creation** - File issues for detected problems
 
 ### Extensibility
 - [ ] **Plugin system** - Auto-discover tasks from `tasks/` directory
-- [ ] **Multi-org support** - Handle multiple Azure DevOps/GitHub orgs
 - [ ] **Configuration file** - YAML/JSON config for organization settings
 - [ ] **Dry-run mode** - Preview changes without applying them
 
@@ -132,26 +104,23 @@ These are ideas the bot could generate autonomously to help the team.
 
 ## 📈 Implementation Priority
 
-### Phase 1: Foundation (Quick Wins)
-1. Fix the bugs task query
-2. Add stale work item detector
-3. Implement broken pipeline detector
-4. Complete summarizer.py and reviewer.py
-5. Add basic Slack notification support
+### Phase 1: Foundation (Complete)
+1. ✅ Fix the bugs task query
+2. ✅ Add stale work item detector
+3. ✅ Complete LLM modules (summarizer, reviewer, advisor)
+4. ✅ Ollama integration (free, local models)
 
 ### Phase 2: Core Features
-6. Sprint summary generator (LLM)
-7. Work item priority rating (LLM)
-8. Stale branch cleanup
-9. Workload distribution report
-10. Scheduler integration
+5. Workload distribution report
+6. Duplicate bug detector
+7. Sprint burndown calculator
+8. Scheduler integration
 
 ### Phase 3: Advanced
-11. Typer CLI upgrade
-12. Trend detection & predictions
-13. Plugin system
-14. Multi-org support
-15. Dashboard generation
+9. Typer CLI upgrade
+10. Plugin system
+11. Trend detection & predictions
+12. Dashboard generation
 
 ---
 
@@ -159,28 +128,7 @@ These are ideas the bot could generate autonomously to help the team.
 
 | Issue | Description | Status |
 |-------|-------------|--------|
-| list_bugs query bug | WIQL excludes Bug type instead of including it | ✅ FIXED |
-| Empty files | summarizer.py and reviewer.py need implementation | ✅ FIXED |
 | No error handling | Client lacks robust error handling for API failures | TODO |
-
-## ✅ Phase 1 Complete
-
-Phase 1 foundation features are now implemented:
-1. ✅ Fixed the bugs task query
-2. ✅ Added stale work item detector
-3. ✅ Implemented broken pipeline detector
-4. ✅ Completed summarizer.py and reviewer.py
-5. ✅ Added Slack notification support
-
----
-
-## 💭 Future Possibilities
-
-- **Multi-agent coordination** - Specialized bots for different concerns
-- **Self-improving prompts** - Learn from team feedback on LLM outputs
-- **Custom model fine-tuning** - Train on org-specific patterns
-- **Natural language interface** - Chat with the bot about the board
-- **Integration marketplace** - Shareable task plugins
 
 ---
 
