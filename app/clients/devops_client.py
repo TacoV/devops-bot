@@ -2,35 +2,34 @@
 Azure DevOps REST API client for work item operations.
 """
 import requests
-from config import DEVOPS_URL, DEVOPS_PROJECT, DEVOPS_TOKEN, DEVOPS_PROJECTID
+import logging
+from config.env import DEVOPS_URL, DEVOPS_PROJECT, DEVOPS_TOKEN, DEVOPS_PROJECTID
 
+logger = logging.getLogger()
 
 class DevOpsClient:
     """Client for Azure DevOps REST API operations."""
     
     def __init__(self):
-        self.base_url = DEVOPS_URL
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {DEVOPS_TOKEN}",
             "Content-Type": "application/json"
         })
 
-    def get_bugs(self, project=None):
-        """Get all active bugs, optionally filtered by project name."""
-        project = project or DEVOPS_PROJECT
-        
+    def get_bugs(self):
+
         wiql = f"""
-            SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.Priority], [System.ChangedDate]
+            SELECT [System.Id]
             FROM WorkItems
             WHERE
-                [System.TeamProject] = '{project}'
-                AND [System.WorkItemType] = 'Bug'
+                [System.TeamProject] = '{DEVOPS_PROJECT}'
+                AND [System.WorkItemType] = 'Issue'
                 AND [System.State] <> 'Closed'
             ORDER BY [System.ChangedDate] DESC
         """
         
-        return self.get_work_items_by_query(wiql, project)
+        return self.get_work_items_by_query(wiql)
 
     def get_work_items(self, ids, fields=None):
         """Get work items by IDs with optional field selection."""
@@ -38,7 +37,7 @@ class DevOpsClient:
             return []
             
         ids_str = ",".join(map(str, ids))
-        url = f"{self.base_url}/_apis/wit/workitemsbatch?api-version=7.0"
+        url = f"{DEVOPS_URL}/_apis/wit/workitemsbatch?api-version=7.0"
         
         payload = {
             "ids": ids,
@@ -49,24 +48,18 @@ class DevOpsClient:
 
         r = self.session.post(url, json=payload)
         r.raise_for_status()
+
         return r.json().get("value", [])
 
-    def get_projects(self):
-        """Get all projects in the organization."""
-        url = f"{self.base_url}/_apis/projects?api-version=7.0&stateFilter=WellFormed"
-        r = self.session.get(url)
-        r.raise_for_status()
-        return r.json()
-
-    def get_work_items_by_query(self, wiql_query, project=None):
+    def get_work_items_by_query(self, wiql_query):
         """Execute a WIQL query and return work items."""
-        project = project or DEVOPS_PROJECTID
-        wiql_url = f"{self.base_url}/{project}/_apis/wit/wiql?api-version=7.0"
+        wiql_url = f"{DEVOPS_URL}/{DEVOPS_PROJECTID}/_apis/wit/wiql?api-version=7.0"
         
         query = {"query": wiql_query}
         
         r = self.session.post(wiql_url, json=query)
         r.raise_for_status()
+
         ids = [item["id"] for item in r.json().get("workItems", [])]
         
         if not ids:
