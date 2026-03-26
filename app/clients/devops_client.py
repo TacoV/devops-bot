@@ -17,20 +17,6 @@ class DevOpsClient:
             "Content-Type": "application/json"
         })
 
-    def get_bugs(self):
-
-        wiql = f"""
-            SELECT [System.Id]
-            FROM WorkItems
-            WHERE
-                [System.TeamProject] = '{DEVOPS_PROJECT}'
-                AND [System.WorkItemType] = 'Issue'
-                AND [System.State] <> 'Closed'
-            ORDER BY [System.ChangedDate] DESC
-        """
-        
-        return self.get_work_items_by_query(wiql)
-
     def get_work_items(self, ids, fields=None):
         """Get work items by IDs with optional field selection."""
         if not ids:

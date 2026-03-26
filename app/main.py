@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from utils.logger import get_logger
+from config.env import DEVOPS_PROJECT
 
 log = get_logger()
 
